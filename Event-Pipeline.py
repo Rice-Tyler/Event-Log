@@ -1,13 +1,10 @@
 from __future__ import absolute_import
-
-import json
 import argparse
 import logging
 import re
 
 import apache_beam as beam
 from apache_beam.io import ReadFromText
-from apache_beam.io import WriteToText
 from apache_beam.options.pipeline_options import PipelineOptions
 from apache_beam.options.pipeline_options import SetupOptions
 from apache_beam import typehints
@@ -36,23 +33,33 @@ class ParseEventFn(beam.DoFn):
     self.num_parse_errors = Metrics.counter(self.__class__, 'num_parse_errors')
 
   def process(self, element):
-      attr = element.strip('{').strip("}").replace('"', "").split(",")
-      if (attr[15].split(":")[1] != "null"):
+    attr = element.strip('{').strip("}").replace('"', "").split(",")
+    if (attr[15].split(":")[1] != "null"):
           attr[15] = attr[15] + attr[16]
           attr.remove(attr[16])
-      attr_dict = {}
-      for k in attr:
+    attr_dict = {}
+    for k in attr:
           print(k)
           key_val = k.split(":", 1)
           print(key_val)
           attr_dict[key_val[0]] = key_val[1]
 
     try:
-      user = components[0].strip()
-      team = components[1].strip()
-      score = int(components[2].strip())
-      timestamp = int(components[3].strip())
-      yield {'user': user, 'team': team, 'score': score, 'timestamp': timestamp}
+      anonymous_id = attr_dict[""].strip()
+      context_1 = attr_dict[""].strip()
+      context_2 = attr_dict[""].strip()
+      context_3 = attr_dict[""].strip()
+      context_4 = attr_dict[""].strip()
+      event = attr_dict[""].strip()
+      event_text = attr_dict[""].strip()
+      id = attr_dict[""].strip()
+      sent_at = attr_dict[""].strip()
+      received_at = attr_dict[""].strip()
+      user_id = attr_dict[""].strip()
+      yield {'anonymous_id': anonymous_id, 'context_1': context_1, 'context_2': context_2,
+             'context_3' : context_3, 'context_4' : context_4, 'event':event,
+             'event_text' : event_text,'id': id,'sent_at' : sent_at,'received_at':received_at,
+             'user_id' : user_id}
     except:  # pylint: disable=bare-except
       # Log and count parse errors.
       self.num_parse_errors.inc()
@@ -60,8 +67,17 @@ class ParseEventFn(beam.DoFn):
 
 def configure_bigquery_write():
   return [
-      ('user_id', 'STRING', lambda e: e[0]),
-      ('total_score', 'INTEGER', lambda e: e[1]),
+      ('anonymous_id', 'STRING', lambda e: e[0]),
+      ('context_1', 'STRING', lambda e: e[1]), ##Context field placeholders v
+      ('context_2', 'STRING', lambda e: e[2]),
+      ('context_3', 'STRING', lambda e: e[3]),
+      ('context_4', 'STRING', lambda e: e[4]),##Context field placeholders ^^
+      ('event', 'STRING', lambda e: e[1]),
+      ('event_text', 'STRING', lambda e: e[1]),
+      ('id', 'STRING', lambda e: e[1]),
+      ('received_at', 'STRING', lambda e: e[1]),
+      ('sent_at', 'STRING', lambda e: e[1]),
+      ('user_id', 'STRING', lambda e: e[1]),
   ]
 
 
@@ -123,29 +139,37 @@ class WriteToBigQuery(beam.PTransform):
             write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND)))
 
 
+def run(argv=None):
+  """Main entry point; defines and runs the user_score pipeline."""
+  parser = argparse.ArgumentParser()
+
+  # The default maps to two large Google Cloud Storage files (each ~12GB)
+  # holding two subsequent day's worth (roughly) of data.
+  parser.add_argument('--input',
+                      dest='input',
+                      default='SOURCE NAME HERE',
+                      help='Path to the data file(s)')
+  parser.add_argument('--dataset',
+                      dest='dataset',
+                      required=True,
+                      help='BigQuery Dataset to write tables to. '
+                           'Must already exist.')
+  parser.add_argument('--table_name',
+                      dest='table_name',
+                      default='user_score',
+                      help='The BigQuery table name. Should not already exist.')
+  known_args, pipeline_args = parser.parse_known_args(argv)
+
+  pipeline_options = PipelineOptions(pipeline_args)
+  with beam.Pipeline(options=pipeline_options) as p:
+
+    (p  # pylint: disable=expression-not-assigned
+     | ReadFromText(known_args.input) # Read events from a file and parse them.
+     | ########INSERT TRANSFORM ##########
+     | WriteToBigQuery(
+         known_args.table_name, known_args.dataset, configure_bigquery_write()))
 
 
-
-def run(argv = None):
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--input',
-                        dests = 'input',
-                        default = 'C:/Users/Student/Documents/Over/146509/146509_2017-06-28_18#649.json.gz',
-                        help='Input file to process.')
-    parser.add_argument('--output',
-                        dest='output',
-                        default='',
-                        help='Output file to write results to.')
-    knoown_args, pipeline_args = parser.parse_known_args(argv)
-    pipeline_args.extend([
-        '--runner-DataflowRunner',
-        'project=SET_PROJ_ID'
-    ])
-
-    pipeline_options = PipelineOptions(pipeline_args)
-    pipeline_options.view_as(SetupOptions).save_main_session = True
-    with beam.Pipeline(options=pipeline_options) as p:
-
-
-
-
+if __name__ == '__main__':
+  logging.getLogger().setLevel(logging.INFO)
+  run()
