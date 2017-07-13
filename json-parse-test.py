@@ -2,8 +2,9 @@ import json
 import apache_beam as beam
 from apache_beam.metrics import Metrics
 
-self = 'l'
-self.num_parse_error = Metrics.counter(self.__class__,'num parse errors')
+#self = 'l'
+#logging = ''
+#self.num_parse_error = Metrics.counter(self.__class__,'num parse errors')
 file = open("C:/Users/Student/Documents/Over/2017-06-28_648","r")
 
 file_read = file.readlines()

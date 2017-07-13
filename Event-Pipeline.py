@@ -1,8 +1,8 @@
 from __future__ import absolute_import
+from __future__ import print_function
 import argparse
 import logging
 import re
-
 import apache_beam as beam
 from apache_beam.io import ReadFromText
 from apache_beam.options.pipeline_options import PipelineOptions
@@ -57,12 +57,6 @@ class ParseEventFn(beam.DoFn):
     for k in attr:
         line_count += 1
         try:
-            # if((len(k.split(':')) > 2) & ("user_properties" in k)):
-            #     key_val = k.replace("user_properties:{","",1).split(":")
-            # elif('event_properties' in k ) & (len(k.split(':')) > 2):
-            #     key_val = k.replace("event_properties:{","",1).split(":")
-            # else:
-            #     key_val = k.strip('\n').strip('}').strip('{').split(":",1)
             if ((len(k.split(':')) > 2) & ("{" in k)):
                 key_val = k.replace('{', '', 1).split(':')
                 attr_dict[key_val[1]] = key_val[2]
@@ -74,39 +68,77 @@ class ParseEventFn(beam.DoFn):
             logging.info('split parse error on %s', k)
 
     try:
-      anonymous_id = attr_dict[""].strip()
-      context_1 = attr_dict[""].strip()
-      context_2 = attr_dict[""].strip()
-      context_3 = attr_dict[""].strip()
-      context_4 = attr_dict[""].strip()
-      event = attr_dict["event_id"].strip()
-      event_text = attr_dict["event_type"].strip()
-      id = attr_dict["uuid"].strip()
-      sent_at = attr_dict["client_upload_time"].strip()
-      received_at = attr_dict["server_upload_time"].strip()
-      user_id = attr_dict["user_id"].strip()
-      yield {'anonymous_id': anonymous_id, 'context_1': context_1, 'context_2': context_2,
-             'context_3' : context_3, 'context_4' : context_4, 'event':event,
-             'event_text' : event_text,'id': id,'sent_at' : sent_at,'received_at':received_at,
+      anonymous_id = attr_dict[""].strip(' ')
+      context_device_carrier = attr_dict["device_carrier"].strip(" ")
+      context_city = attr_dict["city"].strip(" ")
+      context_platform = attr_dict["platform"].strip(" ")
+      context_os_version = attr_dict["os_version"].strip(" ")
+      context_version_name = attr_dict["version_name"].strip(" ")
+      context_ip_address = attr_dict["ip_address"].strip(" ")
+      context_dma = attr_dict["dma"].strip(" ")
+      context_device_type = attr_dict["device_type"].strip(" ")
+      context_device_manufacturer = attr_dict["device_manufacturer"].strip(" ")
+      context_start_version = attr_dict["start_version"].strip(" ")
+      context_os_name = attr_dict["os_name"].strip(" ")
+      context_device_id = attr_dict["device_id"].strip(" ")
+      context_language = attr_dict["language"].strip(" ")
+      context_device_model = attr_dict["device_model"].strip(" ")
+      context_country = attr_dict["country"].strip(" ")
+      context_region = attr_dict["region"]
+      event = attr_dict["event_id"].strip(" ")
+      event_text = attr_dict["event_type"].strip(" ")
+      id = attr_dict["uuid"].strip(" ")
+      sent_at = attr_dict["client_upload_time"].strip(" ")
+      received_at = attr_dict["server_upload_time"].strip(" ")
+      user_id = attr_dict["user_id"].strip(" ")
+
+      yield {'anonymous_id': anonymous_id, 'context_device_carrier' : context_device_carrier, 'context_city': context_city,
+             'context_plstform': context_platform,'context_os_version' : context_os_version, 'context_version_name' : context_version_name,
+             'context_ip_address' : context_ip_address, 'context_dma' : context_dma, 'context_device_type' : context_device_type,
+             'context_device_manufacturer' : context_device_manufacturer, 'context_start_version' : context_start_version,
+             'context_os_name' : context_os_name, 'context_device_id' : context_device_id, 'context_language' : context_language,
+             'context_device_model' : context_device_model, 'context_country' : context_country, 'context_region' : context_region,
+             'event':event,'event_text' : event_text,'id': id,'sent_at' : sent_at,'received_at':received_at,
              'user_id' : user_id}
     except:  # pylint: disable=bare-except
       # Log and count parse errors.
       self.num_parse_errors.inc()
       logging.info('Parse error on %s.', element)
 
+
+class Event_Logging(beam.PTransform):
+  def expand(self, pcoll):
+    return (pcoll
+            | 'Parse Event Logs' >> beam.ParDo(ParseEventFn())
+
+            )
+
+
 def configure_bigquery_write():
   return [
       ('anonymous_id', 'STRING', lambda e: e[0]),
-      ('context_1', 'STRING', lambda e: e[1]), ##Context field placeholders v
-      ('context_2', 'STRING', lambda e: e[2]),
-      ('context_3', 'STRING', lambda e: e[3]),
-      ('context_4', 'STRING', lambda e: e[4]),##Context field placeholders ^^
-      ('event', 'STRING', lambda e: e[5]),
-      ('event_text', 'STRING', lambda e: e[6]),
-      ('id', 'STRING', lambda e: e[7]),
-      ('received_at', 'STRING', lambda e: e[8]),
-      ('sent_at', 'STRING', lambda e: e[9]),
-      ('user_id', 'STRING', lambda e: e[10]),
+      ('context_device_carrier', 'STRING', lambda e: e[1])
+      ('context_city', 'STRING', lambda e: e[2]), ##Context field placeholders v
+      ('context_platform', 'STRING', lambda e: e[3]),
+      ('context_os_version', 'STRING', lambda e: e[4]),
+      ('context_version_name', 'STRING', lambda e: e[5]),
+      ('context_ip_address', 'STRING', lambda e: e[6]),
+      ('context_dma', 'STRING', lambda e: e[7]),
+      ('context_device_type', 'STRING', lambda e: e[8]),
+      ('context_device_manufacturer', 'STRING', lambda e: e[9]),
+      ('context_start_version', 'STRING', lambda e: e[10]),
+      ('context_os_name', 'STRING', lambda e: e[11]),
+      ('context_device_id', 'STRING', lambda e: e[12]),
+      ('context_language', 'STRING', lambda e: e[13]),
+      ('context_device_model', 'STRING', lambda e: e[14]),
+      ('context_country', 'STRING', lambda e: e[15]),
+      ('context_region', 'STRING', lambda e: e[16]),
+      ('event', 'INTEGER', lambda e: e[17]),
+      ('event_text', 'STRING', lambda e: e[18]),
+      ('id', 'STRING', lambda e: e[19]),
+      ('received_at', 'STRING', lambda e: e[20]),
+      ('sent_at', 'STRING', lambda e: e[21]),
+      ('user_id', 'STRING', lambda e: e[22]),
   ]
 
 
@@ -172,8 +204,6 @@ def run(argv=None):
   """Main entry point; defines and runs the user_score pipeline."""
   parser = argparse.ArgumentParser()
 
-  # The default maps to two large Google Cloud Storage files (each ~12GB)
-  # holding two subsequent day's worth (roughly) of data.
   parser.add_argument('--input',
                       dest='input',
                       default='SOURCE NAME HERE',
@@ -185,7 +215,7 @@ def run(argv=None):
                            'Must already exist.')
   parser.add_argument('--table_name',
                       dest='table_name',
-                      default='user_score',
+                      default='Event',
                       help='The BigQuery table name. Should not already exist.')
   known_args, pipeline_args = parser.parse_known_args(argv)
 
@@ -194,7 +224,7 @@ def run(argv=None):
 
     (p  # pylint: disable=expression-not-assigned
      | ReadFromText(known_args.input) # Read events from a file and parse them.
-     | ########INSERT TRANSFORM ##########
+     | Event_Logging()
      | WriteToBigQuery(
          known_args.table_name, known_args.dataset, configure_bigquery_write()))
 
