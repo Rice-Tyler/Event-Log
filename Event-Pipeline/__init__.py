@@ -206,7 +206,6 @@ def run(argv=None):
 
   parser.add_argument('--input',
                       dest='input',
-                      default='SOURCE NAME HERE',
                       help='Path to the data file(s)')
   parser.add_argument('--dataset',
                       dest='dataset',
